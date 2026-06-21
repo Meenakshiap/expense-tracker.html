@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #2d3748;
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; }
+    header span { font-size: 1.5rem; }
+
+    .container { max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    /* Summary Cards */
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card-label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .card-value { font-size: 26px; font-weight: 700; }
+    .card-value.balance { color: #2d3748; }
+    .card-value.income  { color: #38a169; }
+    .card-value.expense { color: #e53e3e; }
+
+    /* Main Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+    /* Form */
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .panel h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.2rem; color: #2d3748; }
+
+    .type-toggle { display: flex; gap: 8px; margin-bottom: 1rem; }
+    .toggle-btn {
+      flex: 1; padding: 9px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+      background: white; cursor: pointer; font-size: 14px; font-weight: 500;
+      color: #718096; transition: all 0.15s;
+    }
+    .toggle-btn.active-income { background: #f0fff4; border-color: #38a169; color: #276749; }
+    .toggle-btn.active-expense { background: #fff5f5; border-color: #e53e3e; color: #9b2c2c; }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 500; }
+    input, select {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1.5px solid #e2e8f0; font-size: 14px;
+      background: #f7fafc; color: #2d3748;
+      outline: none; transition: border 0.15s;
+    }
+    input:focus, select:focus { border-color: #667eea; background: white; }
+
+    .add-btn {
+      width: 100%; padding: 11px; background: #2d3748; color: white;
+      border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; margin-top: 4px; transition: background 0.15s;
+    }
+    .add-btn:hover { background: #4a5568; }
+
+    /* Chart panel */
+    .chart-panel { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .chart-tabs { display: flex; gap: 8px; margin-bottom: 1rem; }
+    .chart-tab {
+      padding: 5px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
+      border: 1.5px solid #e2e8f0; background: white; color: #718096; transition: all 0.15s;
+    }
+    .chart-tab.active { background: #2d3748; color: white; border-color: #2d3748; }
+    .chart-wrap { position: relative; width: 100%; height: 220px; }
+
+    /* Transaction list */
+    .tx-panel { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .tx-panel h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #2d3748; }
+    .tx-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+    .tx-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid #edf2f7; transition: background 0.1s;
+    }
+    .tx-item:hover { background: #f7fafc; }
+    .tx-emoji { font-size: 20px; width: 36px; height: 36px; background: #edf2f7; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-name { font-size: 14px; font-weight: 600; color: #2d3748; }
+    .tx-meta { font-size: 12px; color: #a0aec0; margin-top: 1px; }
+    .tx-amount { font-size: 15px; font-weight: 700; }
+    .tx-amount.income { color: #38a169; }
+    .tx-amount.expense { color: #e53e3e; }
+    .del-btn {
+      background: none; border: none; color: #cbd5e0; cursor: pointer;
+      font-size: 18px; padding: 2px 6px; border-radius: 6px; transition: all 0.1s;
+    }
+    .del-btn:hover { color: #e53e3e; background: #fff5f5; }
+    .empty-msg { text-align: center; color: #a0aec0; font-size: 14px; padding: 2rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #2d3748; color: white; padding: 10px 24px; border-radius: 30px;
+      font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.3s;
+      pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 640px) {
+      .summary { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>💰</span>
+  <h1>Expense Tracker</h1>
+</header>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="summary">
+    <div class="card">
+      <div class="card-label">Balance</div>
+      <div class="card-value balance" id="m-balance">₹0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Income</div>
+      <div class="card-value income" id="m-income">₹0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Expenses</div>
+      <div class="card-value expense" id="m-expense">₹0</div>
+    </div>
+  </div>
+
+  <!-- Form + Chart -->
+  <div class="grid">
+
+    <!-- Add Transaction Form -->
+    <div class="panel">
+      <h2>Add Transaction</h2>
+      <div class="type-toggle">
+        <button class="toggle-btn active-income" id="btn-income" onclick="setType('income')">⬇ Income</button>
+        <button class="toggle-btn" id="btn-expense" onclick="setType('expense')">⬆ Expense</button>
+      </div>
+      <div class="form-group">
+        <label for="tx-desc">Description</label>
+        <input type="text" id="tx-desc" placeholder="e.g. Salary, Rent, Food..." />
+      </div>
+      <div class="form-group">
+        <label for="tx-amount">Amount (₹)</label>
+        <input type="number" id="tx-amount" placeholder="Enter amount" min="1" />
+      </div>
+      <div class="form-group">
+        <label for="tx-category">Category</label>
+        <select id="tx-category">
+          <option value="Other">Select category</option>
+          <option>Food</option>
+          <option>Transport</option>
+          <option>Shopping</option>
+          <option>Housing</option>
+          <option>Health</option>
+          <option>Entertainment</option>
+          <option>Salary</option>
+          <option>Freelance</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="tx-date">Date</label>
+        <input type="date" id="tx-date" />
+      </div>
+      <button class="add-btn" onclick="addTransaction()">+ Add Transaction</button>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-panel">
+      <h2>Visual Reports</h2>
+      <div class="chart-tabs">
+        <button class="chart-tab active" id="tab-bar" onclick="switchTab('bar')">Monthly</button>
+        <button class="chart-tab" id="tab-donut" onclick="switchTab('donut')">By Category</button>
+      </div>
+      <div id="wrap-bar" class="chart-wrap">
+        <canvas id="chart-bar" role="img" aria-label="Monthly income vs expense chart">No data yet.</canvas>
+      </div>
+      <div id="wrap-donut" class="chart-wrap" style="display:none;">
+        <canvas id="chart-donut" role="img" aria-label="Spending by category donut chart">No data yet.</canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Transaction List -->
+  <div class="tx-panel">
+    <h2>All Transactions</h2>
+    <div class="tx-list" id="tx-list">
+      <div class="empty-msg">No transactions yet. Add one above! 👆</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Data ───────────────────────────────────────────────
+  const EMOJIS = {
+    Food:'🍔', Transport:'🚌', Shopping:'🛍️', Housing:'🏠',
+    Health:'💊', Entertainment:'🎬', Salary:'💼', Freelance:'💻', Other:'💰'
+  };
+
+  let txType = 'income';
+  let nextId = 7;
+  let transactions = [
+    { id:1, type:'income',  desc:'Salary',           amount:25000, category:'Salary',        date:'2024-06-01' },
+    { id:2, type:'expense', desc:'Rent',              amount:8000,  category:'Housing',       date:'2024-06-02' },
+    { id:3, type:'expense', desc:'Groceries',         amount:2200,  category:'Food',          date:'2024-06-05' },
+    { id:4, type:'income',  desc:'Freelance Project', amount:5000,  category:'Freelance',     date:'2024-06-10' },
+    { id:5, type:'expense', desc:'Bus Pass',          amount:600,   category:'Transport',     date:'2024-06-11' },
+    { id:6, type:'expense', desc:'Netflix',           amount:199,   category:'Entertainment', date:'2024-06-12' },
+  ];
+
+  let barChart = null, donutChart = null;
+
+  // ─── Helpers ────────────────────────────────────────────
+  function fmt(n) {
+    return '₹' + Math.round(n).toLocaleString('en-IN');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  // ─── Type Toggle ────────────────────────────────────────
+  function setType(t) {
+    txType = t;
+    document.getElementById('btn-income').className  = 'toggle-btn' + (t==='income'  ? ' active-income'  : '');
+    document.getElementById('btn-expense').className = 'toggle-btn' + (t==='expense' ? ' active-expense' : '');
+  }
+
+  // ─── Add Transaction ────────────────────────────────────
+  function addTransaction() {
+    const desc     = document.getElementById('tx-desc').value.trim();
+    const amount   = parseFloat(document.getElementById('tx-amount').value);
+    const category = document.getElementById('tx-category').value || 'Other';
+    const date     = document.getElementById('tx-date').value || new Date().toISOString().slice(0,10);
+
+    if (!desc)         { showToast('⚠️ Please enter a description'); return; }
+    if (!amount || amount <= 0) { showToast('⚠️ Please enter a valid amount'); return; }
+
+    transactions.unshift({ id: nextId++, type: txType, desc, amount, category, date });
+    document.getElementById('tx-desc').value   = '';
+    document.getElementById('tx-amount').value = '';
+    showToast(txType === 'income' ? '✅ Income added!' : '✅ Expense added!');
+    render();
+  }
+
+  // ─── Delete ─────────────────────────────────────────────
+  function deleteTransaction(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    showToast('🗑️ Transaction deleted');
+    render();
+  }
+
+  // ─── Render ─────────────────────────────────────────────
+  function render() {
+    const income  = transactions.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+    const expense = transactions.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+    const balance = income - expense;
+
+    document.getElementById('m-income').textContent  = fmt(income);
+    document.getElementById('m-expense').textContent = fmt(expense);
+    document.getElementById('m-balance').textContent = fmt(balance);
+    document.getElementById('m-balance').style.color = balance >= 0 ? '#38a169' : '#e53e3e';
+
+    renderList();
+    renderBarChart();
+    renderDonutChart();
+  }
+
+  function renderList() {
+    const el = document.getElementById('tx-list');
+    if (!transactions.length) {
+      el.innerHTML = '<div class="empty-msg">No transactions yet. Add one above! 👆</div>';
+      return;
+    }
+    el.innerHTML = transactions.map(t => `
+      <div class="tx-item">
+        <div class="tx-emoji">${EMOJIS[t.category] || '💰'}</div>
+        <div class="tx-info">
+          <div class="tx-name">${t.desc}</div>
+          <div class="tx-meta">${t.category} &nbsp;·&nbsp; ${t.date}</div>
+        </div>
+        <div class="tx-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</div>
+        <button class="del-btn" onclick="deleteTransaction(${t.id})" title="Delete">×</button>
+      </div>
+    `).join('');
+  }
+
+  // ─── Bar Chart ──────────────────────────────────────────
+  function renderBarChart() {
+    const months = {};
+    transactions.forEach(t => {
+      const m = t.date.slice(0, 7);
+      if (!months[m]) months[m] = { income: 0, expense: 0 };
+      months[m][t.type] += t.amount;
+    });
+    const sorted = Object.keys(months).sort();
+    const labels  = sorted.map(m => {
+      const [y, mo] = m.split('-');
+      return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1] + ' ' + y.slice(2);
+    });
+    const incomeData  = sorted.map(m => months[m].income);
+    const expenseData = sorted.map(m => months[m].expense);
+
+    if (barChart) barChart.destroy();
+    barChart = new Chart(document.getElementById('chart-bar'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Income',  data: incomeData,  backgroundColor: '#38a169', borderRadius: 5 },
+          { label: 'Expense', data: expenseData, backgroundColor: '#e53e3e', borderRadius: 5 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { size: 12 }, color: '#4a5568' } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#718096' } },
+          y: { grid: { color: '#edf2f7' }, ticks: { color: '#718096', callback: v => '₹' + v.toLocaleString('en-IN') } }
+        }
+      }
+    });
+  }
+
+  // ─── Donut Chart ────────────────────────────────────────
+  function renderDonutChart() {
+    const cats = {};
+    transactions.filter(t => t.type === 'expense').forEach(t => {
+      cats[t.category] = (cats[t.category] || 0) + t.amount;
+    });
+    const labels = Object.keys(cats);
+    const data   = labels.map(k => cats[k]);
+    const colors = ['#38a169','#e53e3e','#3182ce','#d69e2e','#9f7aea','#ed8936','#319795','#e53e3e'];
+
+    if (donutChart) donutChart.destroy();
+    if (!data.length) return;
+    donutChart = new Chart(document.getElementById('chart-donut'), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 12 }, color: '#4a5568', padding: 12 } }
+        },
+        cutout: '58%'
+      }
+    });
+  }
+
+  // ─── Tab Switch ─────────────────────────────────────────
+  function switchTab(t) {
+    document.getElementById('tab-bar').className   = 'chart-tab' + (t === 'bar'   ? ' active' : '');
+    document.getElementById('tab-donut').className = 'chart-tab' + (t === 'donut' ? ' active' : '');
+    document.getElementById('wrap-bar').style.display   = t === 'bar'   ? '' : 'none';
+    document.getElementById('wrap-donut').style.display = t === 'donut' ? '' : 'none';
+  }
+
+  // ─── Init ───────────────────────────────────────────────
+  document.getElementById('tx-date').value = new Date().toISOString().slice(0, 10);
+  render();
+</script>
+</body>
+</html>
