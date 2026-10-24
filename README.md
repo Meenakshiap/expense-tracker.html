@@ -1,5 +1,9 @@
 # Expense Tracker
 
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80" alt="Expense tracker dashboard preview" width="900" />
+</p>
+
 A clean and modern expense tracking web app built with plain HTML, CSS, and JavaScript. It helps users manage income and expenses, monitor their balance, and visualize spending trends through charts.
 
 <p align="center">
